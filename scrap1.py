@@ -2,21 +2,38 @@ import requests
 from bs4 import BeautifulSoup
 import json
 
-# URL i faqes për scraping
-url = 'https://www.bbc.com/news'
+def fetch_quotes():
+    # URL e faqes që do të bëjmë scraping
+    url = 'http://quotes.toscrape.com/'
 
-# Kërko për faqen dhe merr HTML-në
-response = requests.get(url)
-soup = BeautifulSoup(response.text, 'html.parser')
+    # Dërgo një kërkesë HTTP për faqen
+    response = requests.get(url)
 
-# Nxjerr titujt e artikujve (për shembull të gjitha elementet <h3> që përdoren për tituj)
-titles = soup.find_all('h3')
+    if response.status_code == 200:
+        # Përdor BeautifulSoup për të analizuar HTML-në
+        soup = BeautifulSoup(response.text, 'html.parser')
 
-# Ruaj titujt në një listë
-data = [{'title': title.get_text()} for title in titles]
+        # Gjej të gjitha citatet dhe autorët
+        quotes = []
+        quote_elements = soup.find_all('div', class_='quote')
 
-# Ruaj të dhënat në një skedar JSON
-with open('data.json', 'w') as f:
-    json.dump(data, f, indent=4)
+        for element in quote_elements:
+            text = element.find('span', class_='text').text
+            author = element.find('small', class_='author').text
+            quotes.append({
+                'quote': text,
+                'author': author
+            })
 
-print("Të dhënat u ruajtën me sukses në data.json.")
+        # Ruaj citatet në një skedar JSON
+        with open('quotes.json', 'w', encoding='utf-8') as f:
+            json.dump(quotes, f, indent=4, ensure_ascii=False)
+
+        print(f"{len(quotes)} citate u ruajtën me sukses në 'quotes.json'.")
+        return quotes
+    else:
+        print(f"Gabim gjatë kërkesës. Statusi: {response.status_code}")
+        return None
+
+if __name__ == "__main__":
+    fetch_quotes()
