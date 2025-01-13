@@ -1,29 +1,63 @@
-from Cryptodome.Cipher import AES
-from Cryptodome.Random import get_random_bytes
+from cryptography.fernet import Fernet
 import json
-import base64
 
-# Funksioni për enkriptim
-def encrypt_data(data, key):
-    cipher = AES.new(key, AES.MODE_EAX)
-    ciphertext, tag = cipher.encrypt_and_digest(data.encode('utf-8'))
-    return cipher.nonce + tag + ciphertext
+# Funksioni për të krijuar një çelës të ri dhe për të ruajtur atë në një skedar
+def generate_key():
+    key = Fernet.generate_key()
+    with open("secret.key", "wb") as key_file:
+        key_file.write(key)
+    print("Çelësi u krijua dhe u ruajt në 'secret.key'.")
 
-# Shkruaj një çelës AES të rastësishëm
-key = get_random_bytes(16)
+# Funksioni për të lexuar çelësin nga skedari
+def load_key():
+    return open("secret.key", "rb").read()
 
-# Lexo të dhënat nga data.json
-with open('data.json', 'r') as f:
-    data = json.load(f)
+# Funksioni për të enkriptuar të dhënat
+def encrypt_data(data):
+    key = load_key()
+    fernet = Fernet(key)
+    encrypted_data = fernet.encrypt(data.encode())
+    return encrypted_data
 
-# Enkripto të dhënat
-encrypted_data = []
-for entry in data:
-    encrypted_entry = encrypt_data(entry['title'], key)
-    encrypted_data.append({'encrypted_title': base64.b64encode(encrypted_entry).decode('utf-8')})
+# Funksioni për të dekriptuar të dhënat
+def decrypt_data(encrypted_data):
+    key = load_key()
+    fernet = Fernet(key)
+    decrypted_data = fernet.decrypt(encrypted_data).decode()
+    return decrypted_data
 
-# Ruaj të dhënat e enkriptuara në një skedar të ri
-with open('encrypted_data.json', 'w') as f:
-    json.dump(encrypted_data, f, indent=4)
+# Funksioni për enkriptimin e të dhënave nga skedari JSON
+def encrypt_quotes():
+    # Lexoni të dhënat nga skedari quotes.json
+    with open('quotes.json', 'r', encoding='utf-8') as f:
+        data = f.read()
 
-print("Të dhënat u enkriptuan dhe u ruajtën në encrypted_data.json.")
+    # Enkriptuam të dhënat
+    encrypted_data = encrypt_data(data)
+
+    # Ruaj të dhënat e enkriptuara në një skedar
+    with open('encrypted_quotes.json', 'wb') as f:
+        f.write(encrypted_data)
+
+    print("Të dhënat u enkriptuan dhe u ruajtën në 'encrypted_quotes.json'.")
+
+# Funksioni për dekriptimin e të dhënave
+def decrypt_and_read():
+    # Lexoni të dhënat e enkriptuara nga skedari
+    with open('encrypted_quotes.json', 'rb') as f:
+        encrypted_data = f.read()
+
+    # Dekriptojmë të dhënat dhe i shfaqim
+    decrypted_data = decrypt_data(encrypted_data)
+    print("Të dhënat e dekriptuara:")
+    print(decrypted_data)
+
+if __name__ == "__main__":
+    # Krijoni çelësin nëse nuk është krijuar ende
+    generate_key()
+
+    # Enkripto të dhënat nga quotes.json dhe i ruaj
+    encrypt_quotes()
+
+    # Dekripto dhe shiko të dhënat
+    decrypt_and_read()
